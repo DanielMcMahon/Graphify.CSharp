@@ -1,4 +1,5 @@
-﻿using Graphify.CSharp.Core.Models;
+﻿using Graphify.CSharp.Core;
+using Graphify.CSharp.Core.Models;
 using Graphify.CSharp.Core.Query;
 using Graphify.CSharp.Core.Storage;
 using Graphify.CSharp.Roslyn;
@@ -37,9 +38,10 @@ public static class GraphTools
     [McpServerTool, Description("Build a Roslyn knowledge graph from a C# solution or project.")]
     public static async Task<string> BuildGraph(
         [Description("Path to a .sln or .csproj file")] string path,
-        [Description("SQLite output path")] string output = ".graphify/graph.db",
+        [Description("SQLite output path (defaults to GRAPHIFY_DB or .graphify/graph.db)")] string? output = null,
         CancellationToken cancellationToken = default)
     {
+        output = GraphifyEnvironment.ResolveDatabasePath(output);
         var builder = new RoslynGraphBuilder();
         var snapshot = await builder.BuildAsync(path, cancellationToken).ConfigureAwait(false);
         await using var database = await GraphDatabase.OpenAsync(output, cancellationToken).ConfigureAwait(false);
@@ -50,10 +52,11 @@ public static class GraphTools
     [McpServerTool, Description("Search the knowledge graph for symbols by name or fully-qualified type.")]
     public static async Task<string> QuerySymbol(
         GraphQueryService queryService,
-        [Description("SQLite database path")] string databasePath = ".graphify/graph.db",
+        [Description("SQLite database path (defaults to GRAPHIFY_DB or .graphify/graph.db)")] string? databasePath = null,
         [Description("Search text")] string query = "",
         CancellationToken cancellationToken = default)
     {
+        databasePath = GraphifyEnvironment.ResolveDatabasePath(databasePath);
         await using var database = await GraphDatabase.OpenAsync(databasePath, cancellationToken).ConfigureAwait(false);
         var nodes = await database.SearchNodesAsync(query, cancellationToken: cancellationToken).ConfigureAwait(false);
         return FormatNodes(nodes);
@@ -62,11 +65,12 @@ public static class GraphTools
     [McpServerTool, Description("Find knowledge paths between two C# symbols.")]
     public static async Task<string> FindPath(
         GraphQueryService queryService,
-        [Description("SQLite database path")] string databasePath = ".graphify/graph.db",
+        [Description("SQLite database path (defaults to GRAPHIFY_DB or .graphify/graph.db)")] string? databasePath = null,
         [Description("Source symbol query")] string from = "",
         [Description("Target symbol query")] string to = "",
         CancellationToken cancellationToken = default)
     {
+        databasePath = GraphifyEnvironment.ResolveDatabasePath(databasePath);
         await using var database = await GraphDatabase.OpenAsync(databasePath, cancellationToken).ConfigureAwait(false);
         var paths = await queryService.FindPathsAsync(database, from, to, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (paths.Count == 0)
@@ -99,10 +103,11 @@ public static class GraphTools
     [McpServerTool, Description("Explain incoming and outgoing relationships for a symbol.")]
     public static async Task<string> ExplainSymbol(
         GraphQueryService queryService,
-        [Description("SQLite database path")] string databasePath = ".graphify/graph.db",
+        [Description("SQLite database path (defaults to GRAPHIFY_DB or .graphify/graph.db)")] string? databasePath = null,
         [Description("Symbol query")] string symbol = "",
         CancellationToken cancellationToken = default)
     {
+        databasePath = GraphifyEnvironment.ResolveDatabasePath(databasePath);
         await using var database = await GraphDatabase.OpenAsync(databasePath, cancellationToken).ConfigureAwait(false);
         var explanation = await queryService.ExplainAsync(database, symbol, cancellationToken).ConfigureAwait(false);
         if (explanation.Node is null)
@@ -132,11 +137,12 @@ public static class GraphTools
     [McpServerTool, Description("Suggest likely architectural gaps when no path exists between symbols.")]
     public static async Task<string> FindGaps(
         GraphQueryService queryService,
-        [Description("SQLite database path")] string databasePath = ".graphify/graph.db",
+        [Description("SQLite database path (defaults to GRAPHIFY_DB or .graphify/graph.db)")] string? databasePath = null,
         [Description("Source symbol query")] string from = "",
         [Description("Target symbol query")] string to = "",
         CancellationToken cancellationToken = default)
     {
+        databasePath = GraphifyEnvironment.ResolveDatabasePath(databasePath);
         await using var database = await GraphDatabase.OpenAsync(databasePath, cancellationToken).ConfigureAwait(false);
         var lines = await queryService.FindGapsAsync(database, from, to, cancellationToken).ConfigureAwait(false);
         return string.Join(Environment.NewLine, lines);

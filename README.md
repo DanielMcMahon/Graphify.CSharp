@@ -53,22 +53,99 @@ The `serve` command launches a local web UI with a force-directed graph (similar
 dotnet run --project src/Graphify.CSharp.Cli -- serve --db .graphify/graph.db --port 5173
 ```
 
-### MCP server (Cursor)
+### MCP server (any AI client)
 
-Add to your MCP config:
+The MCP server uses **stdio** transport, which works with Cursor, GitHub Copilot, OpenCode, Codex, and other MCP-compatible clients. Each client spawns its own server process; they can all run at the same time and share the same graph when pointed at the same database file.
+
+**Tools:** `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindGaps`.
+
+**Database path resolution** (for all query tools and `BuildGraph` output):
+
+1. Explicit `databasePath` / `output` argument in the tool call
+2. `GRAPHIFY_DB` environment variable
+3. `.graphify/graph.db` (relative to the client's working directory)
+
+Set `GRAPHIFY_DB` once in each client's MCP config so every tool uses the same graph without repeating the path:
+
+```bash
+export GRAPHIFY_DB="/absolute/path/to/your/project/.graphify/graph.db"
+```
+
+Build the MCP server once, then reference the DLL in config (faster than `dotnet run`):
+
+```bash
+dotnet build src/Graphify.CSharp.Mcp
+# DLL: src/Graphify.CSharp.Mcp/bin/Debug/net9.0/Graphify.CSharp.Mcp.dll
+```
+
+#### Cursor
+
+`~/.cursor/mcp.json` or `.cursor/mcp.json` in your project:
 
 ```json
 {
   "mcpServers": {
     "graphify-csharp": {
       "command": "dotnet",
-      "args": ["run", "--project", "/absolute/path/to/Graphify.CSharp/src/Graphify.CSharp.Mcp"]
+      "args": ["/absolute/path/to/Graphify.CSharp/src/Graphify.CSharp.Mcp/bin/Debug/net9.0/Graphify.CSharp.Mcp.dll"],
+      "env": {
+        "GRAPHIFY_DB": "/absolute/path/to/your/project/.graphify/graph.db"
+      }
     }
   }
 }
 ```
 
-Tools: `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindGaps`.
+#### GitHub Copilot (CLI / VS Code)
+
+`~/.copilot/mcp-config.json` or `.vscode/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "graphify-csharp": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["/absolute/path/to/Graphify.CSharp/src/Graphify.CSharp.Mcp/bin/Debug/net9.0/Graphify.CSharp.Mcp.dll"],
+      "env": {
+        "GRAPHIFY_DB": "/absolute/path/to/your/project/.graphify/graph.db"
+      }
+    }
+  }
+}
+```
+
+#### OpenCode
+
+`~/.config/opencode/opencode.json`:
+
+```json
+{
+  "mcp": {
+    "graphify-csharp": {
+      "type": "local",
+      "command": [
+        "dotnet",
+        "/absolute/path/to/Graphify.CSharp/src/Graphify.CSharp.Mcp/bin/Debug/net9.0/Graphify.CSharp.Mcp.dll"
+      ],
+      "enabled": true,
+      "environment": {
+        "GRAPHIFY_DB": "/absolute/path/to/your/project/.graphify/graph.db"
+      }
+    }
+  }
+}
+```
+
+#### Codex and other stdio MCP clients
+
+Use the same `command`, `args`, and `GRAPHIFY_DB` pattern as Copilot. If your client supports `type: "stdio"` with `command` + `args`, it should work without code changes.
+
+#### Tips for multi-client use
+
+- **Build the graph once** with the CLI or `BuildGraph`, then query from any client.
+- Avoid running `BuildGraph` from two clients at the same time on the same `.db` file.
+- Use an **absolute** `GRAPHIFY_DB` path so different clients aren't affected by their working directory.
 
 ### Graph model
 
@@ -82,6 +159,9 @@ Tools: `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindGaps`.
 | `returns` | Method return type |
 | `contains` | Namespace/type containment |
 | `project_references` | Project dependency |
+| `dispatches` | MediatR `ISender.Send(...)` |
+| `handles` | MediatR `IRequestHandler<,>` / `INotificationHandler<>` |
+| `publishes` | MediatR `ISender.Publish(...)` |
 
 Confidence: `Extracted` (compiler-resolved), `Ambiguous` (heuristic/unresolved), `Inferred` (reserved for future doc linking).
 
@@ -89,7 +169,7 @@ Confidence: `Extracted` (compiler-resolved), `Ambiguous` (heuristic/unresolved),
 
 - [ ] Roslyn analyzer package for incremental IDE updates
 - [ ] ASP.NET endpoint → handler → repository flow templates
-- [ ] MediatR / EF Core / DI registration specialized edges
+- [x] MediatR specialized edges (`dispatches`, `handles`, `publishes`)
 - [ ] JSON export compatible with Graphify tooling
 - [ ] Watch mode to rebuild graph on file changes
 
