@@ -1,27 +1,27 @@
 const relationColors = {
-  calls: '#5b8cff',
-  references: '#35c9a3',
+  calls: '#5eead4',
+  references: '#93c5fd',
   inherits: '#f0b429',
-  implements: '#ff8f5b',
-  injects: '#c77dff',
-  contains: '#6f7d96',
-  returns: '#4cc9f0',
-  overrides: '#ff6b6b',
-  project_references: '#adb5bd',
-  dispatches: '#ff79c6',
-  handles: '#f1fa8c',
-  publishes: '#ffb86c',
-  routes: '#7ee787'
+  implements: '#fb923c',
+  injects: '#c4b5fd',
+  contains: '#64748b',
+  returns: '#38bdf8',
+  overrides: '#f87171',
+  project_references: '#94a3b8',
+  dispatches: '#f472b6',
+  handles: '#fde047',
+  publishes: '#fdba74',
+  routes: '#86efac'
 };
 
 const kindColors = {
-  Type: '#5b8cff',
-  Method: '#35c9a3',
-  Property: '#c77dff',
-  Field: '#f0b429',
-  Namespace: '#6f7d96',
-  Assembly: '#adb5bd',
-  Project: '#adb5bd'
+  Type: '#f0b429',
+  Method: '#5eead4',
+  Property: '#c4b5fd',
+  Field: '#fb923c',
+  Namespace: '#64748b',
+  Assembly: '#94a3b8',
+  Project: '#94a3b8'
 };
 
 const state = {
@@ -41,31 +41,55 @@ const networkOptions = {
       enabled: true,
       direction: 'LR',
       sortMethod: 'directed',
-      levelSeparation: 200,
-      nodeSpacing: 120
+      levelSeparation: 220,
+      nodeSpacing: 140,
+      treeSpacing: 180
     }
   },
-  physics: {
-    enabled: false
-  },
+  physics: { enabled: false },
   interaction: {
     dragView: true,
     zoomView: true,
     dragNodes: true,
     scrollToZoom: true,
     hover: true,
-    tooltipDelay: 120,
+    tooltipDelay: 80,
     multiselect: false,
+    navigationButtons: false,
     keyboard: {
       enabled: true,
       bindToWindow: false,
       speed: { x: 10, y: 10, zoom: 0.02 }
     },
-    navigationButtons: true,
-    zoomSpeed: 0.12
+    zoomSpeed: 0.1
+  },
+  nodes: {
+    borderWidth: 1,
+    borderWidthSelected: 2,
+    font: {
+      face: 'Instrument Sans, ui-sans-serif, sans-serif',
+      color: '#f3f4f6',
+      size: 13
+    },
+    margin: 10,
+    shadow: {
+      enabled: true,
+      color: 'rgba(0,0,0,0.35)',
+      size: 8,
+      x: 0,
+      y: 3
+    }
   },
   edges: {
-    width: 1.5
+    width: 1.25,
+    selectionWidth: 2,
+    smooth: false,
+    font: {
+      face: 'IBM Plex Mono, ui-monospace, monospace',
+      size: 10,
+      color: '#9aa3b2',
+      strokeWidth: 0
+    }
   }
 };
 
@@ -80,48 +104,72 @@ const legend = document.getElementById('legend');
 
 function initFilters() {
   relationFilters.innerHTML = Object.keys(relationColors).map(relation => `
-    <label>
+    <label class="chip active" data-relation="${relation}">
       <input type="checkbox" data-relation="${relation}" checked />
+      <span class="dot" style="background:${relationColors[relation]}"></span>
       <span>${relation}</span>
     </label>
   `).join('');
 
-  relationFilters.querySelectorAll('input[type="checkbox"]').forEach(input => {
+  relationFilters.querySelectorAll('.chip').forEach(chip => {
+    const input = chip.querySelector('input');
+    chip.addEventListener('click', () => {
+      input.checked = !input.checked;
+      input.dispatchEvent(new Event('change'));
+    });
     input.addEventListener('change', () => {
       if (input.checked) {
         state.enabledRelations.add(input.dataset.relation);
+        chip.classList.add('active');
       } else {
         state.enabledRelations.delete(input.dataset.relation);
+        chip.classList.remove('active');
       }
       refreshEdgeFilters();
     });
   });
 
   legend.innerHTML = `
-    <div>Drag background to pan • Scroll/pinch to zoom • Drag nodes to reposition</div>
-    <div>Shortcuts: + / - zoom, F fit, 0 reset</div>
-    ${Object.entries(relationColors).slice(0, 5).map(([relation, color]) => `
-      <div class="legend-row"><span class="swatch" style="background:${color}"></span>${relation}</div>
-    `).join('')}
+    <div>Pan the canvas, scroll to zoom, drag nodes to rearrange.</div>
+    <div style="margin-top:0.35rem">+ / − zoom · F fit · 0 reset</div>
   `;
 }
 
 function buildNodeItem(node) {
   const selected = node.id === state.selectedNodeId;
+  const accent = kindColors[node.kind] ?? '#94a3b8';
+  const isMethod = node.kind === 'Method';
+
   return {
     id: node.id,
-    label: node.label,
+    label: shortenLabel(node.label),
     title: node.title,
     color: {
-      background: kindColors[node.kind] ?? '#8b95a8',
-      border: selected ? '#ffffff' : '#1f2a44',
-      highlight: { background: '#ffffff', border: '#5b8cff' }
+      background: selected ? '#252b38' : '#181c25',
+      border: selected ? '#5eead4' : accent,
+      highlight: {
+        background: '#252b38',
+        border: '#5eead4'
+      }
     },
-    font: { color: '#e8eefc', size: 14 },
-    borderWidth: selected ? 3 : 1,
-    shape: node.kind === 'Method' ? 'box' : 'dot',
-    size: node.kind === 'Type' ? 22 : 16
+    font: {
+      color: selected ? '#ffffff' : '#f3f4f6',
+      size: isMethod ? 12 : 13
+    },
+    borderWidth: selected ? 2 : 1,
+    shape: isMethod ? 'box' : 'dot',
+    size: isMethod ? undefined : 18,
+    widthConstraint: isMethod ? { minimum: 90, maximum: 180 } : undefined,
+    shapeProperties: isMethod ? { borderRadius: 8 } : undefined
   };
+}
+
+function shortenLabel(label) {
+  if (!label || label.length <= 42) {
+    return label;
+  }
+
+  return `${label.slice(0, 20)}…${label.slice(-18)}`;
 }
 
 function buildEdgeItems(data) {
@@ -133,13 +181,12 @@ function buildEdgeItems(data) {
       to: edge.to,
       label: edge.label,
       title: edge.title,
-      arrows: 'to',
+      arrows: { to: { enabled: true, scaleFactor: 0.65 } },
       color: {
-        color: relationColors[edge.relation] ?? '#8b95a8',
-        highlight: '#ffffff'
-      },
-      font: { align: 'middle', color: '#cbd5e1', strokeWidth: 0, size: 11 },
-      smooth: false
+        color: relationColors[edge.relation] ?? '#64748b',
+        highlight: '#f3f4f6',
+        opacity: 0.85
+      }
     }));
 }
 
@@ -149,7 +196,7 @@ function focusNode(nodeId) {
   }
 
   state.network.selectNodes([nodeId]);
-  state.network.focus(nodeId, { scale: 1.15, animation: false });
+  state.network.focus(nodeId, { scale: 1.1, animation: false });
 }
 
 function finishGraphUpdate(shouldFit) {
@@ -259,8 +306,9 @@ function appendCommonParams(params) {
 async function loadOverview() {
   const overview = await fetchJson(`/api/overview?justMyCode=${getJustMyCodeParam()}`);
   const builtAt = overview.metadata?.built_at ?? 'unknown';
-  const solution = overview.metadata?.solution_path ?? 'unknown solution';
-  metaEl.textContent = `${overview.metadata?.node_count ?? 0} nodes • ${overview.metadata?.edge_count ?? 0} edges • ${solution} • built ${builtAt}`;
+  const solution = (overview.metadata?.solution_path ?? 'unknown solution').split(/[/\\]/).pop();
+  metaEl.textContent = `${overview.metadata?.node_count ?? 0} nodes · ${overview.metadata?.edge_count ?? 0} edges · ${solution}`;
+  metaEl.title = `${overview.metadata?.solution_path ?? ''} · built ${builtAt}`;
 }
 
 async function loadGraph(center = state.centerNodeId, { focusId = null } = {}) {
@@ -351,17 +399,28 @@ async function selectNode(nodeId, { reloadGraph = false } = {}) {
 
 async function runSearch() {
   const query = searchInput.value.trim();
+  if (!query) {
+    searchResults.innerHTML = '';
+    return;
+  }
+
   const results = await fetchJson(`/api/search?q=${encodeURIComponent(query)}&justMyCode=${getJustMyCodeParam()}`);
+  if (results.length === 0) {
+    searchResults.innerHTML = '<li class="sub" style="color:var(--muted);padding:0.5rem;">No matches.</li>';
+    return;
+  }
+
   searchResults.innerHTML = results.map(node => `
     <li>
-      <button type="button" data-node-id="${encodeURIComponent(node.id)}">
-        <strong>${escapeHtml(node.fullName ?? node.name)}</strong><br />
-        <span>${escapeHtml(node.kind)}${node.filePath ? ` • ${escapeHtml(node.filePath)}:${node.line ?? ''}` : ''}</span>
+      <button type="button" class="result-card" data-node-id="${encodeURIComponent(node.id)}">
+        <span class="kind-badge">${escapeHtml(node.kind)}</span>
+        <strong>${escapeHtml(node.fullName ?? node.name)}</strong>
+        <span class="sub">${node.filePath ? `${escapeHtml(node.filePath)}:${node.line ?? ''}` : 'No source location'}</span>
       </button>
     </li>
   `).join('');
 
-  searchResults.querySelectorAll('button').forEach(button => {
+  searchResults.querySelectorAll('.result-card').forEach(button => {
     button.addEventListener('click', async () => {
       const nodeId = decodeURIComponent(button.dataset.nodeId);
       await selectNode(nodeId, { reloadGraph: true });
@@ -371,7 +430,7 @@ async function runSearch() {
 
 function renderEdgeGroup(title, items) {
   if (!items?.length) {
-    return `<div class="edge-group"><h4>${title}</h4><div class="edge-item">None</div></div>`;
+    return `<div class="edge-group"><h4>${title}</h4><div class="edge-item" style="cursor:default"><span>None</span></div></div>`;
   }
 
   return `
@@ -379,8 +438,9 @@ function renderEdgeGroup(title, items) {
       <h4>${title}</h4>
       ${items.map(item => `
         <div class="edge-item" data-node-id="${encodeURIComponent(item.otherNode.id)}">
-          <strong>${escapeHtml(item.otherNode.fullName ?? item.otherNode.name)}</strong><br />
-          <span>${escapeHtml(item.edge.relation)} • ${escapeHtml(item.edge.confidence)}${item.edge.sourceFile ? ` • ${escapeHtml(item.edge.sourceFile)}:${item.edge.line ?? ''}` : ''}</span>
+          <span class="relation-tag" style="background:${relationColors[item.edge.relation] ?? '#94a3b8'}">${escapeHtml(item.edge.relation)}</span>
+          <strong>${escapeHtml(item.otherNode.fullName ?? item.otherNode.name)}</strong>
+          <span>${escapeHtml(item.edge.confidence)}${item.edge.sourceFile ? ` · ${escapeHtml(item.edge.sourceFile)}:${item.edge.line ?? ''}` : ''}</span>
         </div>
       `).join('')}
     </div>
@@ -391,8 +451,9 @@ async function showNodeDetail(nodeId) {
   const detail = await fetchJson(`/api/nodes/${encodeURIComponent(nodeId)}?justMyCode=${getJustMyCodeParam()}`);
   nodeDetail.classList.remove('empty');
   nodeDetail.innerHTML = `
+    <span class="kind-badge">${escapeHtml(detail.node.kind)}</span>
     <h3>${escapeHtml(detail.node.fullName ?? detail.node.name)}</h3>
-    <div class="meta">${escapeHtml(detail.node.kind)}${detail.node.filePath ? ` • ${escapeHtml(detail.node.filePath)}:${detail.node.line ?? ''}` : ''}</div>
+    <div class="meta">${detail.node.filePath ? `${escapeHtml(detail.node.filePath)}:${detail.node.line ?? ''}` : 'No source location'}</div>
     ${renderEdgeGroup('Callers', detail.callers)}
     ${renderEdgeGroup('Callees', detail.callees)}
     ${renderEdgeGroup('Referenced by', detail.referencesIn)}
@@ -417,7 +478,6 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;');
 }
 
-document.getElementById('searchBtn').addEventListener('click', runSearch);
 searchInput.addEventListener('keydown', event => {
   if (event.key === 'Enter') {
     runSearch();
