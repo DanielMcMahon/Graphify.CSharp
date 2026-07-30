@@ -157,6 +157,7 @@ public sealed class RoslynGraphBuilder
         }
 
         MediatorGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
+        AspNetGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
     }
 
     private static void ExtractDeclaredSymbols(

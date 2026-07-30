@@ -10,7 +10,8 @@ const relationColors = {
   project_references: '#adb5bd',
   dispatches: '#ff79c6',
   handles: '#f1fa8c',
-  publishes: '#ffb86c'
+  publishes: '#ffb86c',
+  routes: '#7ee787'
 };
 
 const kindColors = {

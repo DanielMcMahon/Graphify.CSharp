@@ -172,6 +172,61 @@ public sealed partial class GraphDatabase : IAsyncDisposable
         return metadata;
     }
 
+    public async Task<GraphSnapshot> LoadSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        var metadata = await GetMetadataAsync(cancellationToken).ConfigureAwait(false);
+        var nodes = new List<GraphNode>();
+        var edges = new List<GraphEdge>();
+
+        await using (var command = _connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT id, kind, name, full_name, assembly, file_path, line, end_line, metadata_json
+                FROM nodes
+                """;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                nodes.Add(ReadNode(reader));
+            }
+        }
+
+        await using (var command = _connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT source_id, target_id, relation, confidence, source_file, line, metadata_json
+                FROM edges
+                """;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                edges.Add(ReadEdge(reader));
+            }
+        }
+
+        metadata.TryGetValue("solution_path", out var solutionPath);
+        metadata.TryGetValue("built_at", out var builtAtValue);
+        var builtAt = DateTimeOffset.TryParse(builtAtValue, out var parsedBuiltAt)
+            ? parsedBuiltAt
+            : DateTimeOffset.UtcNow;
+
+        IReadOnlyList<string> userAssemblies = [];
+        if (metadata.TryGetValue("user_assemblies", out var userAssembliesJson) &&
+            !string.IsNullOrWhiteSpace(userAssembliesJson))
+        {
+            userAssemblies = JsonSerializer.Deserialize<List<string>>(userAssembliesJson) ?? [];
+        }
+
+        return new GraphSnapshot
+        {
+            SolutionPath = solutionPath ?? string.Empty,
+            BuiltAt = builtAt,
+            Nodes = nodes,
+            Edges = edges,
+            UserAssemblies = userAssemblies
+        };
+    }
+
     public ValueTask DisposeAsync() => _connection.DisposeAsync();
 
     private async Task InitializeSchemaAsync(CancellationToken cancellationToken)

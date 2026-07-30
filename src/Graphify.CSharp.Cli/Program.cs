@@ -1,4 +1,4 @@
-﻿using Graphify.CSharp.Core.Models;
+﻿using Graphify.CSharp.Core.Export;
 using Graphify.CSharp.Core.Query;
 using Graphify.CSharp.Core.Storage;
 using Graphify.CSharp.Roslyn;
@@ -16,9 +16,11 @@ internal static class Program
         var buildCommand = new Command("build", "Analyze a solution or project and persist the knowledge graph.");
         var buildPathArg = new Argument<string>("path", "Path to a .sln or .csproj file.");
         var buildOutputOption = new Option<string>("--output", () => ".graphify/graph.db", "SQLite database output path.");
+        var buildJsonOption = new Option<string?>("--json", () => null, "Optional Graphify-compatible JSON export path.");
         buildCommand.AddArgument(buildPathArg);
         buildCommand.AddOption(buildOutputOption);
-        buildCommand.SetHandler(BuildAsync, buildPathArg, buildOutputOption);
+        buildCommand.AddOption(buildJsonOption);
+        buildCommand.SetHandler(BuildAsync, buildPathArg, buildOutputOption, buildJsonOption);
         root.AddCommand(buildCommand);
 
         var queryCommand = new Command("query", "Search graph nodes by name or fully-qualified symbol.");
@@ -67,10 +69,38 @@ internal static class Program
         serveCommand.SetHandler(ServeAsync, serveDbOption, servePortOption, serveHostOption);
         root.AddCommand(serveCommand);
 
+        var exportCommand = new Command("export", "Export a graph database to Graphify-compatible JSON.");
+        var exportDbOption = new Option<string>("--db", () => ".graphify/graph.db", "SQLite database path.");
+        var exportOutputOption = new Option<string>("--output", () => ".graphify/graph.json", "JSON output path.");
+        exportCommand.AddOption(exportDbOption);
+        exportCommand.AddOption(exportOutputOption);
+        exportCommand.SetHandler(ExportAsync, exportDbOption, exportOutputOption);
+        root.AddCommand(exportCommand);
+
+        var watchCommand = new Command("watch", "Rebuild the graph when source files change.");
+        var watchPathArg = new Argument<string>("path", "Path to a .sln or .csproj file.");
+        var watchOutputOption = new Option<string>("--output", () => ".graphify/graph.db", "SQLite database output path.");
+        var watchJsonOption = new Option<string?>("--json", () => null, "Optional Graphify-compatible JSON export path.");
+        var watchDebounceOption = new Option<int>("--debounce", () => 1500, "Debounce interval in milliseconds.");
+        watchCommand.AddArgument(watchPathArg);
+        watchCommand.AddOption(watchOutputOption);
+        watchCommand.AddOption(watchJsonOption);
+        watchCommand.AddOption(watchDebounceOption);
+        watchCommand.SetHandler(WatchAsync, watchPathArg, watchOutputOption, watchJsonOption, watchDebounceOption);
+        root.AddCommand(watchCommand);
+
+        var flowsCommand = new Command("flows", "Find ASP.NET endpoint to repository flow paths.");
+        var flowsDbOption = new Option<string>("--db", () => ".graphify/graph.db", "SQLite database path.");
+        var flowsEndpointArg = new Argument<string>("endpoint", "Endpoint route or handler query.");
+        flowsCommand.AddOption(flowsDbOption);
+        flowsCommand.AddArgument(flowsEndpointArg);
+        flowsCommand.SetHandler(FlowsAsync, flowsDbOption, flowsEndpointArg);
+        root.AddCommand(flowsCommand);
+
         return await root.InvokeAsync(args).ConfigureAwait(false);
     }
 
-    private static async Task BuildAsync(string path, string output)
+    private static async Task BuildAsync(string path, string output, string? jsonOutput)
     {
         Console.WriteLine($"Building graph from {path}...");
         var builder = new RoslynGraphBuilder();
@@ -80,6 +110,12 @@ internal static class Program
         await database.ReplaceSnapshotAsync(snapshot).ConfigureAwait(false);
 
         Console.WriteLine($"Wrote {snapshot.Nodes.Count} nodes and {snapshot.Edges.Count} edges to {output}");
+
+        if (!string.IsNullOrWhiteSpace(jsonOutput))
+        {
+            await GraphJsonExporter.WriteAsync(snapshot, jsonOutput).ConfigureAwait(false);
+            Console.WriteLine($"Exported JSON to {jsonOutput}");
+        }
     }
 
     private static async Task QueryAsync(string dbPath, string text)
@@ -173,4 +209,46 @@ internal static class Program
 
     private static Task ServeAsync(string dbPath, int port, string host) =>
         GraphWebHost.RunAsync(["--db", dbPath, "--port", port.ToString(), "--host", host]);
+
+    private static async Task ExportAsync(string dbPath, string jsonOutput)
+    {
+        await using var database = await GraphDatabase.OpenAsync(dbPath).ConfigureAwait(false);
+        var snapshot = await database.LoadSnapshotAsync().ConfigureAwait(false);
+        await GraphJsonExporter.WriteAsync(snapshot, jsonOutput).ConfigureAwait(false);
+        Console.WriteLine($"Exported {snapshot.Nodes.Count} nodes and {snapshot.Edges.Count} edges to {jsonOutput}");
+    }
+
+    private static Task WatchAsync(string path, string output, string? jsonOutput, int debounce) =>
+        new GraphWatchService().WatchAsync(path, output, jsonOutput, debounce);
+
+    private static async Task FlowsAsync(string dbPath, string endpoint)
+    {
+        await using var database = await GraphDatabase.OpenAsync(dbPath).ConfigureAwait(false);
+        var service = new GraphFlowService();
+        var paths = await service.FindEndpointFlowsAsync(database, endpoint).ConfigureAwait(false);
+
+        if (paths.Count == 0)
+        {
+            Console.WriteLine("No endpoint flow found.");
+            return;
+        }
+
+        var index = 1;
+        foreach (var path in paths)
+        {
+            Console.WriteLine($"Flow {index++}:");
+            foreach (var step in path.Steps)
+            {
+                if (step.IncomingEdge is null)
+                {
+                    Console.WriteLine($"  {step.Node.FullName ?? step.Node.Name}");
+                    continue;
+                }
+
+                Console.WriteLine($"  --[{step.IncomingEdge.Relation}/{step.IncomingEdge.Confidence}]--> {step.Node.FullName ?? step.Node.Name}");
+            }
+
+            Console.WriteLine();
+        }
+    }
 }

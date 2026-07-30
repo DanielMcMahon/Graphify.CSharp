@@ -19,6 +19,9 @@ internal static class RoslynGraphBuilderHelpers
 
     public static void AddEdge(List<GraphEdge> edges, GraphEdge edge) => edges.Add(edge);
 
+    public static void AddGraphNode(Dictionary<string, GraphNode> nodes, GraphNode node) =>
+        nodes[node.Id] = node;
+
     public static string GetSymbolId(ISymbol symbol, string? fallbackAssembly = null) =>
         SymbolId.ForSymbol(
             symbol.ContainingAssembly?.Name ?? fallbackAssembly ?? "unknown",

@@ -16,9 +16,27 @@ public sealed partial class GraphDatabase
         GraphRelation.Publishes
     ];
 
-    public async Task<GraphPathIndex> LoadPathIndexAsync(CancellationToken cancellationToken = default)
+    public static readonly string[] FlowTraversalRelations =
+    [
+        GraphRelation.Routes,
+        GraphRelation.Dispatches,
+        GraphRelation.Handles,
+        GraphRelation.Calls,
+        GraphRelation.Injects
+    ];
+
+    public async Task<GraphPathIndex> LoadFlowIndexAsync(CancellationToken cancellationToken = default) =>
+        await LoadRelationIndexAsync(FlowTraversalRelations, reverseHandles: true, cancellationToken).ConfigureAwait(false);
+
+    public async Task<GraphPathIndex> LoadPathIndexAsync(CancellationToken cancellationToken = default) =>
+        await LoadRelationIndexAsync(PathTraversalRelations, reverseHandles: true, cancellationToken).ConfigureAwait(false);
+
+    private async Task<GraphPathIndex> LoadRelationIndexAsync(
+        IReadOnlyList<string> relations,
+        bool reverseHandles,
+        CancellationToken cancellationToken)
     {
-        var relationFilter = string.Join(", ", PathTraversalRelations.Select(_ => $"'{_}'"));
+        var relationFilter = string.Join(", ", relations.Select(_ => $"'{_}'"));
         var adjacency = new Dictionary<string, List<(string NeighborId, GraphEdge Edge)>>(StringComparer.Ordinal);
         var touchedNodeIds = new HashSet<string>(StringComparer.Ordinal);
 
@@ -40,8 +58,9 @@ public sealed partial class GraphDatabase
             }
         }
 
-        await using (var command = _connection.CreateCommand())
+        if (reverseHandles)
         {
+            await using var command = _connection.CreateCommand();
             command.CommandText = """
                 SELECT source_id, target_id, relation, confidence, source_file, line, metadata_json
                 FROM edges

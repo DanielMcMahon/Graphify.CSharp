@@ -32,6 +32,15 @@ dotnet run --project src/Graphify.CSharp.Cli -- explain OrderService
 # Gap analysis when no path exists
 dotnet run --project src/Graphify.CSharp.Cli -- gaps MyController MyRepository
 
+# Export Graphify-compatible JSON
+dotnet run --project src/Graphify.CSharp.Cli -- export --db .graphify/graph.db --output .graphify/graph.json
+
+# Watch for file changes and rebuild automatically
+dotnet run --project src/Graphify.CSharp.Cli -- watch /path/to/YourSolution.sln --output .graphify/graph.db --json .graphify/graph.json
+
+# Trace ASP.NET endpoint -> handler -> repository flows
+dotnet run --project src/Graphify.CSharp.Cli -- flows "GET /jobs" --db .graphify/graph.db
+
 # Interactive graph UI (like Graphify's graph.html)
 dotnet run --project src/Graphify.CSharp.Cli -- serve
 # Open http://127.0.0.1:5173
@@ -162,16 +171,31 @@ Use the same `command`, `args`, and `GRAPHIFY_DB` pattern as Copilot. If your cl
 | `dispatches` | MediatR `ISender.Send(...)` |
 | `handles` | MediatR `IRequestHandler<,>` / `INotificationHandler<>` |
 | `publishes` | MediatR `ISender.Publish(...)` |
+| `routes` | ASP.NET minimal API / controller route → handler |
 
 Confidence: `Extracted` (compiler-resolved), `Ambiguous` (heuristic/unresolved), `Inferred` (reserved for future doc linking).
 
 ### Roadmap
 
-- [ ] Roslyn analyzer package for incremental IDE updates
-- [ ] ASP.NET endpoint → handler → repository flow templates
+- [x] Roslyn analyzer package for incremental IDE updates (`Graphify.CSharp.Analyzers`)
+- [x] ASP.NET endpoint → handler → repository flow templates (`routes` edges + `flows` command)
 - [x] MediatR specialized edges (`dispatches`, `handles`, `publishes`)
-- [ ] JSON export compatible with Graphify tooling
-- [ ] Watch mode to rebuild graph on file changes
+- [x] JSON export compatible with Graphify tooling (`export` command and `build --json`)
+- [x] Watch mode to rebuild graph on file changes (`watch` command)
+
+### Incremental analyzer
+
+Reference the analyzer from a project to capture per-compilation call fragments under `obj/graphify/fragment.json`:
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="path/to/Graphify.CSharp.Analyzers/Graphify.CSharp.Analyzers.csproj"
+                    OutputItemType="Analyzer"
+                    ReferenceOutputAssembly="false" />
+</ItemGroup>
+```
+
+The analyzer reports `GRAPHIFY001` info diagnostics with call-edge counts per assembly. Pair it with the `watch` command for continuous graph rebuilds during development.
 
 ### License
 

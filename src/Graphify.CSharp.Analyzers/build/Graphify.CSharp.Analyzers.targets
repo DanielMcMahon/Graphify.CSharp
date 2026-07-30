@@ -1,0 +1,9 @@
+<Project>
+  <ItemGroup>
+    <Analyzer Include="$(MSBuildProjectDirectory)\..\Graphify.CSharp.Analyzers\bin\$(Configuration)\netstandard2.0\Graphify.CSharp.Analyzers.dll"
+              Condition="Exists('$(MSBuildProjectDirectory)\..\Graphify.CSharp.Analyzers\bin\$(Configuration)\netstandard2.0\Graphify.CSharp.Analyzers.dll')" />
+  </ItemGroup>
+
+  <Target Name="GraphifyReportIncrementalFragment" AfterTargets="Build" Condition="'$(EnableGraphifyIncremental)' == 'true'">
+  </Target>
+</Project>

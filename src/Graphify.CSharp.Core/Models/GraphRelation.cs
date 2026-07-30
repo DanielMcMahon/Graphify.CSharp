@@ -16,4 +16,5 @@ public static class GraphRelation
     public const string Handles = "handles";
     public const string Dispatches = "dispatches";
     public const string Publishes = "publishes";
+    public const string Routes = "routes";
 }
