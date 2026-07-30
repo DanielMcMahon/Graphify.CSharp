@@ -1,0 +1,267 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b1020;
+  --panel: #121a2f;
+  --panel-2: #18233d;
+  --text: #e8eefc;
+  --muted: #9db0d0;
+  --accent: #5b8cff;
+  --border: #2a3758;
+  --calls: #5b8cff;
+  --references: #35c9a3;
+  --inherits: #f0b429;
+  --injects: #c77dff;
+  --other: #8b95a8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+.topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #10182b, #0b1020);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.brand p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+input[type="search"], button, label {
+  font: inherit;
+}
+
+input[type="search"] {
+  min-width: 280px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+  user-select: none;
+}
+
+.toggle input {
+  accent-color: var(--accent);
+}
+
+.sidebar {
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 1rem;
+}
+
+.sidebar section + section {
+  margin-top: 1.25rem;
+}
+
+.sidebar h2 {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.filters {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.filters label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+}
+
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.result-list li button {
+  width: 100%;
+  text-align: left;
+}
+
+.node-detail.empty {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.node-detail h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.node-detail .meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 0.75rem;
+}
+
+.edge-group {
+  margin-bottom: 0.9rem;
+}
+
+.edge-group h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.edge-item {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  margin-bottom: 0.35rem;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.edge-item:hover {
+  border-color: var(--accent);
+}
+
+.graph-panel {
+  position: relative;
+  min-height: 0;
+}
+
+#graph {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  background:
+    radial-gradient(circle at top, rgba(91, 140, 255, 0.08), transparent 35%),
+    var(--bg);
+}
+
+#graph:active {
+  cursor: grabbing;
+}
+
+#graph canvas {
+  outline: none;
+}
+
+.zoom-toolbar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  z-index: 2;
+}
+
+.zoom-toolbar button {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: 8px;
+  background: rgba(18, 26, 47, 0.92);
+}
+
+.legend {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(18, 26, 47, 0.92);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 60vh;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 40vh;
+  }
+}

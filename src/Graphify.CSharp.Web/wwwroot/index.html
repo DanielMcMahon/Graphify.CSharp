@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graphify.CSharp</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Graphify.CSharp</h1>
+        <p id="meta">Loading graph metadata…</p>
+      </div>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search symbols (OrderService, IRepository…)" />
+        <button id="searchBtn" type="button">Search</button>
+        <label>
+          Depth
+          <input id="depth" type="range" min="1" max="4" value="2" />
+          <span id="depthValue">2</span>
+        </label>
+        <button id="reloadBtn" type="button">Reload graph</button>
+        <label class="toggle">
+          <input id="justMyCode" type="checkbox" checked />
+          <span>Just My Code</span>
+        </label>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <section>
+        <h2>Relations</h2>
+        <div id="relationFilters" class="filters"></div>
+      </section>
+      <section>
+        <h2>Search results</h2>
+        <ul id="searchResults" class="result-list"></ul>
+      </section>
+      <section>
+        <h2>Selected symbol</h2>
+        <div id="nodeDetail" class="node-detail empty">Click a node to inspect callers, callees, and references.</div>
+      </section>
+    </aside>
+
+    <main class="graph-panel">
+      <div id="graph"></div>
+      <div class="zoom-toolbar" aria-label="Graph navigation">
+        <button id="zoomInBtn" type="button" title="Zoom in (+)">+</button>
+        <button id="zoomOutBtn" type="button" title="Zoom out (-)">−</button>
+        <button id="zoomFitBtn" type="button" title="Fit graph (F)">Fit</button>
+        <button id="zoomResetBtn" type="button" title="Reset pan/zoom (0)">Reset</button>
+      </div>
+      <div id="legend" class="legend"></div>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

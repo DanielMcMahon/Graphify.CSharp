@@ -1,0 +1,8 @@
+bin/
+obj/
+.graphify/
+*.db
+*.user
+.vs/
+.idea/
+.DS_Store
