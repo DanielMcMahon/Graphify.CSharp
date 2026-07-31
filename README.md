@@ -48,6 +48,59 @@ dotnet run --project src/Graphify.CSharp.Cli -- serve
 
 Output defaults to `.graphify/graph.db`.
 
+### One-command agent setup
+
+The fastest way to make any AI agent architecture-aware in a C# repo:
+
+```bash
+cd /path/to/your/csharp/project
+dotnet run --project /path/to/Graphify.CSharp/src/Graphify.CSharp.Cli -- init
+```
+
+This single command:
+
+1. Finds your `.sln` and builds `.graphify/graph.db`
+2. Writes `.graphify/config.json` and `GRAPH_REPORT.md`
+3. Installs a **Cursor skill**, **MCP server**, and **always-on rule** into `.cursor/`
+4. Adds a **git post-commit hook** to rebuild the graph after commits
+
+After `init`, restart Cursor and ask naturally:
+
+- "How does `OfferJob` work?"
+- "Who calls `INotifier`?"
+- "Trace the flow from the jobs API to the database"
+
+The agent calls the `HowDoesItWork` MCP tool automatically — no manual CLI needed.
+
+### Install into AI agents manually
+
+Like [Graphify's `graphify install`](https://github.com/Graphify-Labs/graphify), Graphify.CSharp can install a **Cursor agent skill** and **MCP server config** in one command:
+
+```bash
+# Install skill + MCP for Cursor, Copilot, and OpenCode (global)
+dotnet run --project src/Graphify.CSharp.Cli -- install
+
+# Install only into the current repo
+dotnet run --project src/Graphify.CSharp.Cli -- install --project --db .graphify/graph.db
+
+# Selective install
+dotnet run --project src/Graphify.CSharp.Cli -- install --cursor-skill --cursor-mcp
+```
+
+| Target | What gets installed |
+|--------|---------------------|
+| Claude Code skill | `~/.claude/skills/graphify-csharp/SKILL.md` |
+| Cursor skill | `~/.cursor/skills/graphify-csharp/SKILL.md` (or `.cursor/skills/...` with `--project`) |
+| Cursor rule | `.cursor/rules/graphify-csharp.mdc` (always-on architecture guidance) |
+| Cursor MCP | `.cursor/mcp.json` |
+| Copilot MCP | `~/.copilot/mcp-config.json` |
+| OpenCode MCP | `~/.config/opencode/opencode.json` |
+| Git hook | `.git/hooks/post-commit` (auto-rebuild after commits) |
+
+The skill teaches agents when and how to build, query, path, explain, and trace flows through your C# graph. MCP configs are merged into existing files — existing servers are preserved.
+
+Restart your AI client after install to pick up MCP changes.
+
 ### Interactive UI
 
 The `serve` command launches a local web UI with a force-directed graph (similar to Graphify's `graph.html`):
@@ -66,7 +119,11 @@ dotnet run --project src/Graphify.CSharp.Cli -- serve --db .graphify/graph.db --
 
 The MCP server uses **stdio** transport, which works with Cursor, GitHub Copilot, OpenCode, Codex, and other MCP-compatible clients. Each client spawns its own server process; they can all run at the same time and share the same graph when pointed at the same database file.
 
-**Tools:** `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindGaps`.
+**Tools:** `Investigate`, `HowDoesItWork`, `EnsureGraph`, `GetGraphStatus`, `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindFlows`, `FindGaps`.
+
+`Investigate` is the default entry point for open-ended questions — it runs search, explanation, impact analysis, and writes a handoff file to `.graphify/investigations/`.
+
+`TraceTable` is for **database migration** work — give it a table name and it traces backwards to entities, SQL/Dapper query sites, ASPX pages, file-path columns, and `System.IO`/blob storage touchpoints.
 
 **Database path resolution** (for all query tools and `BuildGraph` output):
 

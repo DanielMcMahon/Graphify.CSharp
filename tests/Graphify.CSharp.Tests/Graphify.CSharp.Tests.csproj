@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Graphify.CSharp.Cli\Graphify.CSharp.Cli.csproj" />
     <ProjectReference Include="..\..\src\Graphify.CSharp.Core\Graphify.CSharp.Core.csproj" />
     <ProjectReference Include="..\..\src\Graphify.CSharp.Roslyn\Graphify.CSharp.Roslyn.csproj" />
   </ItemGroup>

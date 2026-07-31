@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Graphify.CSharp.Core\Graphify.CSharp.Core.csproj" />
+    <ProjectReference Include="..\Graphify.CSharp.Mcp\Graphify.CSharp.Mcp.csproj" />
     <ProjectReference Include="..\Graphify.CSharp.Roslyn\Graphify.CSharp.Roslyn.csproj" />
     <ProjectReference Include="..\Graphify.CSharp.Web\Graphify.CSharp.Web.csproj" />
   </ItemGroup>
@@ -22,12 +23,27 @@
     <Description>Roslyn-powered C# knowledge graph builder and query CLI.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Graphify.CSharp.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SkillFiles Include="..\..\skills\**\*.md" />
+    <AssetFiles Include="..\..\assets\**\*" />
+  </ItemGroup>
+
   <Target Name="CopyWebUiAssets" AfterTargets="Build">
     <ItemGroup>
       <WebUiFiles Include="..\Graphify.CSharp.Web\wwwroot\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(WebUiFiles)"
           DestinationFiles="@(WebUiFiles->'$(OutputPath)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(SkillFiles)"
+          DestinationFiles="@(SkillFiles->'$(OutputPath)skills\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AssetFiles)"
+          DestinationFiles="@(AssetFiles->'$(OutputPath)assets\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
   </Target>
 

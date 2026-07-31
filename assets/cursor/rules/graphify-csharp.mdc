@@ -1,0 +1,22 @@
+---
+description: Use Graphify.CSharp to answer architecture questions from the Roslyn knowledge graph instead of guessing.
+alwaysApply: true
+---
+
+# Architecture questions use Graphify.CSharp
+
+When the user asks how something works, who calls what, how data flows, or how a feature is wired:
+
+1. Call the `Investigate` MCP tool first with the full question.
+2. If the graph is missing or stale, call `EnsureGraph` before querying.
+3. Use `ExplainSymbol`, `FindPath`, or `FindFlows` for follow-up detail.
+4. Do not guess architecture when the graph can answer.
+
+Examples that should trigger graph lookup:
+
+- "How does OfferJob work?"
+- "Trace notifications from the API to INotifier"
+- "Who calls OrderService?"
+- "What happens when a job is offered?"
+
+Prefer graph-backed answers with file paths and relation types (`calls`, `handles`, `routes`, `injects`).

@@ -1,4 +1,5 @@
 using Graphify.CSharp.Core.Models;
+using Graphify.CSharp.Core.Query;
 using Graphify.CSharp.Core.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
@@ -53,6 +54,62 @@ public static class GraphWebHost
                 justMyCode == true).ConfigureAwait(false);
 
             return Results.Ok(ToGraphResponse(export));
+        });
+
+        app.MapGet("/api/consult", async (string q) =>
+        {
+            if (string.IsNullOrWhiteSpace(q))
+            {
+                return Results.BadRequest("Query parameter 'q' is required.");
+            }
+
+            await using var database = await GraphDatabase.OpenAsync(options.DatabasePath).ConfigureAwait(false);
+            var service = new InvestigationService();
+            var result = await service.InvestigateAsync(database, q, projectRoot: null, writeHandoff: false).ConfigureAwait(false);
+            return Results.Ok(new
+            {
+                markdown = result.Markdown,
+                followUps = result.SuggestedFollowUps,
+                files = result.FilesToRead
+            });
+        });
+
+        app.MapGet("/api/startup/entrypoints", async (bool? justMyCode) =>
+        {
+            await using var database = await GraphDatabase.OpenAsync(options.DatabasePath).ConfigureAwait(false);
+            var entryPoints = await database.FindStartupEntryPointsAsync(justMyCode == true).ConfigureAwait(false);
+            return Results.Ok(entryPoints.Select(node => new
+            {
+                id = node.Id,
+                label = node.FullName ?? node.Name,
+                kind = node.Kind.ToString(),
+                filePath = node.FilePath,
+                line = node.Line
+            }));
+        });
+
+        app.MapGet("/api/startup", async (string? file, int? depth, int? maxNodes, bool? justMyCode) =>
+        {
+            await using var database = await GraphDatabase.OpenAsync(options.DatabasePath).ConfigureAwait(false);
+            var service = new StartupCompositionService();
+            var result = await service.GetStartupMapAsync(
+                database,
+                file,
+                depth ?? 4,
+                maxNodes ?? 250,
+                justMyCode == true).ConfigureAwait(false);
+
+            return Results.Ok(new
+            {
+                entryPoints = result.EntryPoints.Select(node => new
+                {
+                    id = node.Id,
+                    label = node.FullName ?? node.Name,
+                    filePath = node.FilePath,
+                    line = node.Line
+                }),
+                graph = ToGraphResponse(result.Graph)
+            });
         });
 
         app.MapGet("/api/nodes/{id}", async (string id, bool? justMyCode) =>

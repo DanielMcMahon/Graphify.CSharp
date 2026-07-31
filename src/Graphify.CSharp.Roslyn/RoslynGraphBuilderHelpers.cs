@@ -22,6 +22,14 @@ internal static class RoslynGraphBuilderHelpers
     public static void AddGraphNode(Dictionary<string, GraphNode> nodes, GraphNode node) =>
         nodes[node.Id] = node;
 
+    public static string? TryGetConstantString(ExpressionSyntax? expression) =>
+        expression switch
+        {
+            LiteralExpressionSyntax literal when literal.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.StringLiteralExpression)
+                => literal.Token.ValueText,
+            _ => null
+        };
+
     public static string GetSymbolId(ISymbol symbol, string? fallbackAssembly = null) =>
         SymbolId.ForSymbol(
             symbol.ContainingAssembly?.Name ?? fallbackAssembly ?? "unknown",
@@ -42,7 +50,22 @@ internal static class RoslynGraphBuilderHelpers
         }
 
         var constructor = node.Ancestors().OfType<ConstructorDeclarationSyntax>().FirstOrDefault();
-        return constructor is not null ? semanticModel.GetDeclaredSymbol(constructor) : null;
+        if (constructor is not null)
+        {
+            return semanticModel.GetDeclaredSymbol(constructor);
+        }
+
+        for (var enclosing = semanticModel.GetEnclosingSymbol(node.SpanStart);
+             enclosing is not null;
+             enclosing = enclosing.ContainingSymbol)
+        {
+            if (enclosing is IMethodSymbol methodSymbol)
+            {
+                return methodSymbol;
+            }
+        }
+
+        return null;
     }
 
     private static GraphNode CreateSymbolNode(ISymbol symbol, string assemblyName, string? filePath, SyntaxNode? declarationSyntax)

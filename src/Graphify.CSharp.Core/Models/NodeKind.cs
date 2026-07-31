@@ -11,5 +11,8 @@ public enum NodeKind
     Event,
     Parameter,
     Attribute,
-    Project
+    Project,
+    Table,
+    Page,
+    FileField
 }

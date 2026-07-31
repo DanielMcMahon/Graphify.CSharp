@@ -1,6 +1,8 @@
-﻿using Graphify.CSharp.Core.Export;
+﻿using Graphify.CSharp.Core;
+using Graphify.CSharp.Core.Export;
 using Graphify.CSharp.Core.Query;
 using Graphify.CSharp.Core.Storage;
+using Graphify.CSharp.Core.Workspace;
 using Graphify.CSharp.Roslyn;
 using Graphify.CSharp.Web;
 using System.CommandLine;
@@ -96,6 +98,84 @@ internal static class Program
         flowsCommand.AddArgument(flowsEndpointArg);
         flowsCommand.SetHandler(FlowsAsync, flowsDbOption, flowsEndpointArg);
         root.AddCommand(flowsCommand);
+
+        var installCommand = new Command("install", "Install Graphify.CSharp skills and MCP config for AI agents.");
+        var installAllOption = new Option<bool>("--all", () => false, "Install skill + MCP for Cursor, Copilot, and OpenCode.");
+        var installClaudeSkillOption = new Option<bool>("--claude-skill", () => false, "Install Claude Code agent skill.");
+        var installCursorSkillOption = new Option<bool>("--cursor-skill", () => false, "Install Cursor agent skill.");
+        var installCursorMcpOption = new Option<bool>("--cursor-mcp", () => false, "Add MCP server to Cursor config.");
+        var installCopilotMcpOption = new Option<bool>("--copilot-mcp", () => false, "Add MCP server to Copilot config.");
+        var installOpenCodeMcpOption = new Option<bool>("--opencode-mcp", () => false, "Add MCP server to OpenCode config.");
+        var installProjectOption = new Option<bool>("--project", () => false, "Install into current project instead of global config.");
+        var installDbOption = new Option<string>("--db", () => ".graphify/graph.db", "Default GRAPHIFY_DB path written into MCP config.");
+        installCommand.AddOption(installAllOption);
+        installCommand.AddOption(installClaudeSkillOption);
+        installCommand.AddOption(installCursorSkillOption);
+        installCommand.AddOption(installCursorMcpOption);
+        installCommand.AddOption(installCopilotMcpOption);
+        installCommand.AddOption(installOpenCodeMcpOption);
+        installCommand.AddOption(installProjectOption);
+        installCommand.AddOption(installDbOption);
+        installCommand.SetHandler(InstallAsync, installAllOption, installClaudeSkillOption, installCursorSkillOption, installCursorMcpOption, installCopilotMcpOption, installOpenCodeMcpOption, installProjectOption, installDbOption);
+        root.AddCommand(installCommand);
+
+        var initCommand = new Command("init", "One-command setup: build graph, install agent skill/MCP/rule, and enable auto-refresh.");
+        var initSolutionOption = new Option<string?>("--solution", () => null, "Path to a .sln file (auto-detected when omitted).");
+        var initDbOption = new Option<string?>("--db", () => null, "SQLite database path (defaults to .graphify/graph.db).");
+        var initGlobalOption = new Option<bool>("--global", () => false, "Also install global agent integrations.");
+        var initNoHookOption = new Option<bool>("--no-hook", () => false, "Skip git post-commit auto-rebuild hook.");
+        initCommand.AddOption(initSolutionOption);
+        initCommand.AddOption(initDbOption);
+        initCommand.AddOption(initGlobalOption);
+        initCommand.AddOption(initNoHookOption);
+        initCommand.SetHandler(InitAsync, initSolutionOption, initDbOption, initGlobalOption, initNoHookOption);
+        root.AddCommand(initCommand);
+
+        var ensureGraphCommand = new Command("ensure-graph", "Build or rebuild the graph when missing or stale.");
+        var ensureProjectRootOption = new Option<string?>("--project-root", () => null, "Project root containing .graphify/config.json.");
+        ensureGraphCommand.AddOption(ensureProjectRootOption);
+        ensureGraphCommand.SetHandler(EnsureGraphAsync, ensureProjectRootOption);
+        root.AddCommand(ensureGraphCommand);
+
+        var statusCommand = new Command("status", "Show graph workspace status.");
+        var statusProjectRootOption = new Option<string?>("--project-root", () => null, "Project root containing .graphify/config.json.");
+        statusCommand.AddOption(statusProjectRootOption);
+        statusCommand.SetHandler(StatusAsync, statusProjectRootOption);
+        root.AddCommand(statusCommand);
+
+        var howCommand = new Command("how", "Explain how a symbol or feature works.");
+        var howDbOption = new Option<string>("--db", () => ".graphify/graph.db", "SQLite database path.");
+        var howTopicArg = new Argument<string>("topic", "Symbol, class, method, or feature name.");
+        howCommand.AddOption(howDbOption);
+        howCommand.AddArgument(howTopicArg);
+        howCommand.SetHandler(HowAsync, howDbOption, howTopicArg);
+        root.AddCommand(howCommand);
+
+        var investigateCommand = new Command("investigate", "Run a full architecture investigation for any question or feature.");
+        var investigateProjectRootOption = new Option<string?>("--project-root", () => null, "Project root containing .graphify/config.json.");
+        var investigateNoHandoffOption = new Option<bool>("--no-handoff", () => false, "Skip writing .graphify/investigations/<topic>.md.");
+        var investigateQuestionArg = new Argument<string>("question", "Natural language question or symbol name.");
+        investigateCommand.AddOption(investigateProjectRootOption);
+        investigateCommand.AddOption(investigateNoHandoffOption);
+        investigateCommand.AddArgument(investigateQuestionArg);
+        investigateCommand.SetHandler(InvestigateAsync, investigateProjectRootOption, investigateNoHandoffOption, investigateQuestionArg);
+        root.AddCommand(investigateCommand);
+
+        var assessCommand = new Command("assess", "Assess removal difficulty or architecture swaps (e.g. MediatR to direct handler calls).");
+        var assessDbOption = new Option<string>("--db", () => ".graphify/graph.db", "SQLite database path.");
+        var assessTopicArg = new Argument<string>("topic", "Symbol to remove, or 'mediator' / 'mediatr' for a MediatR swap assessment.");
+        assessCommand.AddOption(assessDbOption);
+        assessCommand.AddArgument(assessTopicArg);
+        assessCommand.SetHandler(AssessAsync, assessDbOption, assessTopicArg);
+        root.AddCommand(assessCommand);
+
+        var traceTableCommand = new Command("trace-table", "Trace backwards from a database table to pages, file columns, and storage touchpoints.");
+        var traceTableProjectRootOption = new Option<string?>("--project-root", () => null, "Project root containing .graphify/config.json.");
+        var traceTableNameArg = new Argument<string>("table", "Database table name.");
+        traceTableCommand.AddOption(traceTableProjectRootOption);
+        traceTableCommand.AddArgument(traceTableNameArg);
+        traceTableCommand.SetHandler(TraceTableAsync, traceTableProjectRootOption, traceTableNameArg);
+        root.AddCommand(traceTableCommand);
 
         return await root.InvokeAsync(args).ConfigureAwait(false);
     }
@@ -220,6 +300,159 @@ internal static class Program
 
     private static Task WatchAsync(string path, string output, string? jsonOutput, int debounce) =>
         new GraphWatchService().WatchAsync(path, output, jsonOutput, debounce);
+
+    private static Task InstallAsync(
+        bool all,
+        bool claudeSkill,
+        bool cursorSkill,
+        bool cursorMcp,
+        bool copilotMcp,
+        bool openCodeMcp,
+        bool project,
+        string dbPath)
+    {
+        var installEverything = all || (!claudeSkill && !cursorSkill && !cursorMcp && !copilotMcp && !openCodeMcp);
+        var options = new InstallOptions
+        {
+            ProjectScope = project,
+            DatabasePath = dbPath,
+            InstallClaudeSkill = installEverything || claudeSkill,
+            InstallCursorSkill = installEverything || cursorSkill,
+            InstallCursorRule = installEverything || cursorSkill,
+            InstallCursorMcp = installEverything || cursorMcp,
+            InstallCopilotMcp = installEverything || copilotMcp,
+            InstallOpenCodeMcp = installEverything || openCodeMcp
+        };
+
+        var installer = new AgentInstaller();
+        var result = installer.Install(options);
+        foreach (var message in result.Messages)
+        {
+            Console.WriteLine(message);
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Restart your AI client to pick up MCP changes.");
+        return Task.CompletedTask;
+    }
+
+    private static async Task InitAsync(string? solution, string? databasePath, bool global, bool noHook)
+    {
+        var setup = new AgentSetupService();
+        var result = await setup.InitializeAsync(new SetupOptions
+        {
+            SolutionPath = solution,
+            DatabasePath = databasePath,
+            GlobalAgents = global,
+            InstallGitHook = !noHook
+        }).ConfigureAwait(false);
+
+        foreach (var message in result.Messages)
+        {
+            Console.WriteLine(message);
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("You can now ask your agent: \"How does <symbol> work?\"");
+        Console.WriteLine("Restart Cursor to pick up MCP and rule changes.");
+    }
+
+    private static async Task EnsureGraphAsync(string? projectRoot)
+    {
+        var setup = new AgentSetupService();
+        Console.WriteLine(await setup.EnsureGraphAsync(projectRoot).ConfigureAwait(false));
+    }
+
+    private static async Task StatusAsync(string? projectRoot)
+    {
+        projectRoot = GraphifyEnvironment.ResolveProjectRoot(projectRoot);
+        projectRoot = GraphWorkspace.DiscoverProjectRoot(projectRoot) ?? projectRoot;
+        var status = await GraphWorkspace.GetStatusAsync(projectRoot).ConfigureAwait(false);
+        Console.WriteLine($"Project root: {projectRoot}");
+        Console.WriteLine($"Configured: {status.ConfigExists}");
+        Console.WriteLine($"Database: {status.DatabasePath}");
+        Console.WriteLine($"Database exists: {status.DatabaseExists}");
+        Console.WriteLine($"Stale: {status.IsStale}");
+        Console.WriteLine($"Solution: {status.SolutionPath ?? "not found"}");
+        Console.WriteLine($"Built at: {status.BuiltAt?.ToString("O") ?? "unknown"}");
+        Console.WriteLine($"Nodes: {status.NodeCount:N0}");
+        Console.WriteLine($"Edges: {status.EdgeCount:N0}");
+    }
+
+    private static async Task HowAsync(string dbPath, string topic)
+    {
+        var projectRoot = GraphWorkspace.DiscoverProjectRoot() ?? Directory.GetCurrentDirectory();
+        var setup = new AgentSetupService();
+        await setup.EnsureGraphAsync(projectRoot).ConfigureAwait(false);
+
+        var config = GraphWorkspace.LoadConfig(projectRoot);
+        var resolvedDb = config?.DatabasePath ?? dbPath;
+        await using var database = await GraphDatabase.OpenAsync(resolvedDb).ConfigureAwait(false);
+        var service = new HowDoesItWorkService();
+        Console.WriteLine(await service.ExplainAsync(database, topic).ConfigureAwait(false));
+    }
+
+    private static async Task InvestigateAsync(string? projectRoot, bool noHandoff, string question)
+    {
+        projectRoot = GraphifyEnvironment.ResolveProjectRoot(projectRoot);
+        projectRoot = GraphWorkspace.DiscoverProjectRoot(projectRoot) ?? projectRoot;
+
+        var setup = new AgentSetupService();
+        await setup.EnsureGraphAsync(projectRoot).ConfigureAwait(false);
+
+        var config = GraphWorkspace.LoadConfig(projectRoot);
+        var databasePath = config?.DatabasePath ?? GraphWorkspace.GetDefaultDatabasePath(projectRoot);
+        await using var database = await GraphDatabase.OpenAsync(databasePath).ConfigureAwait(false);
+
+        var service = new InvestigationService();
+        var result = await service.InvestigateAsync(database, question, projectRoot, writeHandoff: !noHandoff).ConfigureAwait(false);
+        Console.WriteLine(result.Markdown);
+        if (!string.IsNullOrWhiteSpace(result.HandoffPath))
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Handoff: {result.HandoffPath}");
+        }
+    }
+
+    private static async Task AssessAsync(string dbPath, string topic)
+    {
+        await using var database = await GraphDatabase.OpenAsync(dbPath).ConfigureAwait(false);
+        var assessment = new ArchitectureAssessmentService();
+
+        if (assessment.LooksLikeMediatorQuestion(topic))
+        {
+            var result = await assessment.AssessMediatorReplacementAsync(database).ConfigureAwait(false);
+            Console.WriteLine(result.Markdown);
+            return;
+        }
+
+        var matches = await database.SearchNodesAsync(topic, limit: 1, justMyCode: true).ConfigureAwait(false);
+        if (matches.Count == 0)
+        {
+            Console.WriteLine($"No symbol matched '{topic}'. Try a type or interface name, or 'mediator' for a MediatR swap assessment.");
+            return;
+        }
+
+        var removal = await assessment.AssessSymbolRemovalAsync(database, matches[0]).ConfigureAwait(false);
+        Console.WriteLine(removal.Markdown);
+    }
+
+    private static async Task TraceTableAsync(string? projectRoot, string tableName)
+    {
+        projectRoot = GraphifyEnvironment.ResolveProjectRoot(projectRoot);
+        projectRoot = GraphWorkspace.DiscoverProjectRoot(projectRoot) ?? projectRoot;
+
+        var setup = new AgentSetupService();
+        await setup.EnsureGraphAsync(projectRoot).ConfigureAwait(false);
+
+        var config = GraphWorkspace.LoadConfig(projectRoot);
+        var databasePath = config?.DatabasePath ?? GraphWorkspace.GetDefaultDatabasePath(projectRoot);
+        await using var database = await GraphDatabase.OpenAsync(databasePath).ConfigureAwait(false);
+
+        var service = new TableMigrationTraceService();
+        var result = await service.TraceAsync(database, tableName).ConfigureAwait(false);
+        Console.WriteLine(result.Markdown);
+    }
 
     private static async Task FlowsAsync(string dbPath, string endpoint)
     {

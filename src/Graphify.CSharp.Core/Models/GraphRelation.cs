@@ -13,8 +13,14 @@ public static class GraphRelation
     public const string AttributeOn = "attribute_on";
     public const string ProjectReferences = "project_references";
     public const string Injects = "injects";
+    public const string Registers = "registers";
     public const string Handles = "handles";
     public const string Dispatches = "dispatches";
     public const string Publishes = "publishes";
     public const string Routes = "routes";
+    public const string MapsToTable = "maps_to_table";
+    public const string QueriesTable = "queries_table";
+    public const string PageCodeBehind = "page_codebehind";
+    public const string HasFileField = "has_file_field";
+    public const string UsesFileStorage = "uses_file_storage";
 }

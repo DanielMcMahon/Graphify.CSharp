@@ -41,8 +41,14 @@ public sealed partial class GraphDatabase : IAsyncDisposable
             await InsertNodeAsync(transaction, node, cancellationToken).ConfigureAwait(false);
         }
 
+        var nodeIds = snapshot.Nodes.Select(node => node.Id).ToHashSet(StringComparer.Ordinal);
         foreach (var edge in snapshot.Edges)
         {
+            if (!nodeIds.Contains(edge.SourceId) || !nodeIds.Contains(edge.TargetId))
+            {
+                continue;
+            }
+
             await InsertEdgeAsync(transaction, edge, cancellationToken).ConfigureAwait(false);
         }
 
@@ -116,6 +122,34 @@ public sealed partial class GraphDatabase : IAsyncDisposable
 
         var userCode = await GetUserCodeContextAsync(cancellationToken).ConfigureAwait(false);
         return results.Where(node => userCode.IsUserNode(node)).Take(limit).ToList();
+    }
+
+    public async Task<IReadOnlyList<GraphNode>> SearchTableNodesAsync(
+        string tableName,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<GraphNode>();
+        await using var command = _connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, kind, name, full_name, assembly, file_path, line, end_line, metadata_json
+            FROM nodes
+            WHERE kind = 'Table'
+              AND (lower(name) = lower($exact) OR lower(full_name) = lower($exact) OR lower(id) = lower($tableId))
+            ORDER BY
+                CASE WHEN lower(name) = lower($exact) THEN 0 ELSE 1 END,
+                length(name)
+            LIMIT 5
+            """;
+        command.Parameters.AddWithValue("$exact", tableName);
+        command.Parameters.AddWithValue("$tableId", SymbolId.ForTable(tableName));
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            results.Add(ReadNode(reader));
+        }
+
+        return results;
     }
 
     private async Task<IReadOnlyList<string>> GetDistinctAssembliesAsync(CancellationToken cancellationToken)

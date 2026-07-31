@@ -32,6 +32,8 @@ public sealed class RoslynGraphBuilder
             throw new ArgumentException("Path must be a .sln or .csproj file.", nameof(solutionOrProjectPath));
         }
 
+        ExtractLegacyWebAssets(fullPath, nodes, edges);
+
         return new GraphSnapshot
         {
             SolutionPath = fullPath,
@@ -41,6 +43,9 @@ public sealed class RoslynGraphBuilder
             UserAssemblies = _userAssemblies.ToList()
         };
     }
+
+    private void ExtractLegacyWebAssets(string solutionOrProjectPath, Dictionary<string, GraphNode> nodes, List<GraphEdge> edges) =>
+        LegacyWebGraphExtractor.Extract(solutionOrProjectPath, nodes, edges);
 
     private async Task BuildFromSolutionAsync(
         string solutionPath,
@@ -158,6 +163,9 @@ public sealed class RoslynGraphBuilder
 
         MediatorGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
         AspNetGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
+        DataGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
+        FileStorageGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
+        DiRegistrationGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
     }
 
     private static void ExtractDeclaredSymbols(
@@ -292,7 +300,7 @@ public sealed class RoslynGraphBuilder
     {
         foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
         {
-            var caller = GetEnclosingCallableSymbol(semanticModel, invocation);
+            var caller = RoslynGraphBuilderHelpers.GetEnclosingCallableSymbol(semanticModel, invocation);
             if (caller is null)
             {
                 continue;
@@ -342,7 +350,7 @@ public sealed class RoslynGraphBuilder
             }
 
             var memberDeclaration = typeSyntax.Ancestors().OfType<MemberDeclarationSyntax>().FirstOrDefault();
-            var enclosing = GetEnclosingCallableSymbol(semanticModel, typeSyntax)
+            var enclosing = RoslynGraphBuilderHelpers.GetEnclosingCallableSymbol(semanticModel, typeSyntax)
                 ?? (memberDeclaration is not null ? semanticModel.GetDeclaredSymbol(memberDeclaration) : null);
             if (enclosing is null)
             {
@@ -359,24 +367,6 @@ public sealed class RoslynGraphBuilder
                 filePath,
                 typeSyntax.GetLocation().GetLineSpan().StartLinePosition.Line + 1));
         }
-    }
-
-    private static ISymbol? GetEnclosingCallableSymbol(SemanticModel semanticModel, SyntaxNode node)
-    {
-        var method = node.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-        if (method is not null)
-        {
-            return semanticModel.GetDeclaredSymbol(method);
-        }
-
-        var accessor = node.Ancestors().OfType<AccessorDeclarationSyntax>().FirstOrDefault();
-        if (accessor is not null)
-        {
-            return semanticModel.GetDeclaredSymbol(accessor);
-        }
-
-        var constructor = node.Ancestors().OfType<ConstructorDeclarationSyntax>().FirstOrDefault();
-        return constructor is not null ? semanticModel.GetDeclaredSymbol(constructor) : null;
     }
 
     private static void AddContainmentEdges(

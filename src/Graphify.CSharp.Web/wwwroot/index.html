@@ -4,87 +4,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Graphify.CSharp</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css" />
-  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <link rel="stylesheet" href="/styles.css?v=4" />
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <div class="app">
-    <header class="command-bar">
+  <div class="layout">
+    <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <div>
-          <div class="brand-title">Graphify.CSharp</div>
-          <div id="meta" class="brand-meta">Loading graph…</div>
-        </div>
+        <h1>Graphify.CSharp</h1>
+        <p id="meta">Loading graph metadata…</p>
       </div>
-
-      <div class="command-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
-        <input id="search" type="search" placeholder="Search symbols, types, methods…" autocomplete="off" />
-        <kbd>↵</kbd>
-      </div>
-
-      <div class="command-actions">
-        <label class="control-pill">
-          <span>Depth</span>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search symbols (OrderService, IRepository…)" />
+        <button id="searchBtn" type="button">Search</button>
+        <label>
+          Depth
           <input id="depth" type="range" min="1" max="4" value="2" />
-          <strong id="depthValue">2</strong>
+          <span id="depthValue">2</span>
         </label>
-        <label class="toggle-pill">
+        <button id="startupBtn" type="button">Startup map</button>
+        <select id="startupFile" title="Program.cs entry point" hidden></select>
+        <button id="reloadBtn" type="button">Reload graph</button>
+        <label class="toggle">
           <input id="justMyCode" type="checkbox" checked />
-          <span>My code only</span>
+          <span>Just My Code</span>
         </label>
-        <button id="reloadBtn" type="button" class="ghost-btn">Reload</button>
       </div>
     </header>
 
-    <main class="workspace">
-      <section class="canvas-wrap">
-        <div id="graph" tabindex="0" aria-label="Knowledge graph canvas"></div>
-
-        <div class="canvas-overlay top-right">
-          <div class="zoom-toolbar" aria-label="Zoom controls">
-            <button id="zoomInBtn" type="button" title="Zoom in (+)">+</button>
-            <button id="zoomOutBtn" type="button" title="Zoom out (−)">−</button>
-            <button id="zoomFitBtn" type="button" title="Fit (F)">Fit</button>
-            <button id="zoomResetBtn" type="button" title="Reset (0)">0</button>
-          </div>
+    <aside class="sidebar">
+      <section>
+        <h2>Consult</h2>
+        <textarea id="consultQuestion" rows="3" placeholder="How hard would it be to remove MediatR? What depends on INotifier?"></textarea>
+        <div class="consult-actions">
+          <button id="consultBtn" type="button">Ask graph</button>
+          <button id="consultMediatorBtn" type="button">MediatR swap</button>
         </div>
-
-        <div class="canvas-overlay bottom-left">
-          <div id="relationFilters" class="relation-chips" aria-label="Relation filters"></div>
-        </div>
-
-        <div id="legend" class="canvas-overlay bottom-right legend-card" aria-live="polite"></div>
+        <div id="consultResult" class="consult-result empty">Ask how something works, what depends on it, or whether you can remove or swap it.</div>
       </section>
+      <section>
+        <h2>Relations</h2>
+        <div id="relationFilters" class="filters"></div>
+      </section>
+      <section>
+        <h2>Search results</h2>
+        <ul id="searchResults" class="result-list"></ul>
+      </section>
+      <section>
+        <h2>Selected symbol</h2>
+        <div id="nodeDetail" class="node-detail empty">Click a node to inspect callers, callees, and references.</div>
+      </section>
+    </aside>
 
-      <aside class="inspector">
-        <section class="inspector-section">
-          <div class="section-head">
-            <h2>Results</h2>
-            <span class="section-hint">Enter to search</span>
-          </div>
-          <ul id="searchResults" class="result-cards"></ul>
-        </section>
-
-        <section class="inspector-section inspector-section-grow">
-          <div class="section-head">
-            <h2>Inspector</h2>
-          </div>
-          <div id="nodeDetail" class="node-detail empty">
-            <div class="empty-state">
-              <div class="empty-icon">◎</div>
-              <p>Select a node to explore callers, callees, and references.</p>
-            </div>
-          </div>
-        </section>
-      </aside>
+    <main class="graph-panel">
+      <div id="graph"></div>
+      <div id="graphPlaceholder" class="graph-placeholder">
+        Search for a symbol, or click <strong>Startup map</strong> to trace Program.cs registrations and dependency injection through your code.
+      </div>
+      <div class="zoom-toolbar" aria-label="Graph navigation">
+        <button id="zoomInBtn" type="button" title="Zoom in (+)">+</button>
+        <button id="zoomOutBtn" type="button" title="Zoom out (-)">−</button>
+        <button id="zoomFitBtn" type="button" title="Fit graph (F)">Fit</button>
+        <button id="zoomResetBtn" type="button" title="Reset pan/zoom (0)">Reset</button>
+      </div>
+      <div id="legend" class="legend"></div>
     </main>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=4"></script>
 </body>
 </html>
