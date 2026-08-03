@@ -8,4 +8,5 @@ public interface IOrderRepository
 public sealed class Order
 {
     public required string Id { get; init; }
+    public Invoice? Invoice { get; init; }
 }

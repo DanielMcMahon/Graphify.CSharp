@@ -30,6 +30,7 @@ internal static class Program
             .AddSingleton<InvestigationService>()
             .AddSingleton<ArchitectureAssessmentService>()
             .AddSingleton<TableMigrationTraceService>()
+            .AddSingleton<UiAccessPathService>()
             .AddSingleton<GraphReportGenerator>()
             .AddMcpServer()
             .WithStdioServerTransport()
@@ -55,6 +56,55 @@ public static class GraphTools
         return ensureResult.WasAlreadyFresh
             ? result.Markdown
             : ensureResult.Message + Environment.NewLine + Environment.NewLine + result.Markdown;
+    }
+
+    [McpServerTool, Description("Get prerequisites, visibility gates, selector hints, and navigation steps for reaching a UI element on a server-rendered surface. Use before writing Playwright tests.")]
+    public static async Task<string> GetUiAccessPath(
+        UiAccessPathService uiService,
+        [Description("UI element, fragment, label, or selector query")] string element,
+        [Description("Optional UI surface or page name to narrow the search")] string? surface = null,
+        [Description("Optional project root containing .graphify/config.json")] string? projectRoot = null,
+        [Description("Return machine-readable JSON instead of markdown")] bool json = false,
+        CancellationToken cancellationToken = default)
+    {
+        var ensureResult = await EnsureGraphInternalAsync(projectRoot, cancellationToken).ConfigureAwait(false);
+        await using var database = await GraphDatabase.OpenAsync(ensureResult.DatabasePath, cancellationToken).ConfigureAwait(false);
+        var result = await uiService.GetAccessPathAsync(database, element, surface, cancellationToken).ConfigureAwait(false);
+        var output = json ? result.Json : result.Markdown;
+        return ensureResult.WasAlreadyFresh
+            ? output
+            : ensureResult.Message + Environment.NewLine + Environment.NewLine + output;
+    }
+
+    [McpServerTool, Description("List fragments, elements, gates, and actions rendered by a UI surface or page.")]
+    public static async Task<string> ListSurfaceUi(
+        UiAccessPathService uiService,
+        [Description("UI surface or page name")] string surface,
+        [Description("Optional project root containing .graphify/config.json")] string? projectRoot = null,
+        CancellationToken cancellationToken = default)
+    {
+        var ensureResult = await EnsureGraphInternalAsync(projectRoot, cancellationToken).ConfigureAwait(false);
+        await using var database = await GraphDatabase.OpenAsync(ensureResult.DatabasePath, cancellationToken).ConfigureAwait(false);
+        var result = await uiService.GetSurfaceMapAsync(database, surface, cancellationToken).ConfigureAwait(false);
+        return ensureResult.WasAlreadyFresh
+            ? result.Markdown
+            : ensureResult.Message + Environment.NewLine + Environment.NewLine + result.Markdown;
+    }
+
+    [McpServerTool, Description("Export Playwright-oriented UI prerequisites JSON for a UI element.")]
+    public static async Task<string> ExportUiPrerequisites(
+        UiAccessPathService uiService,
+        [Description("UI element, fragment, or label query")] string element,
+        [Description("Optional UI surface or page name")] string? surface = null,
+        [Description("Optional project root containing .graphify/config.json")] string? projectRoot = null,
+        CancellationToken cancellationToken = default)
+    {
+        var ensureResult = await EnsureGraphInternalAsync(projectRoot, cancellationToken).ConfigureAwait(false);
+        await using var database = await GraphDatabase.OpenAsync(ensureResult.DatabasePath, cancellationToken).ConfigureAwait(false);
+        var json = await uiService.ExportPrerequisitesJsonAsync(database, element, surface, cancellationToken).ConfigureAwait(false);
+        return ensureResult.WasAlreadyFresh
+            ? json
+            : ensureResult.Message + Environment.NewLine + Environment.NewLine + json;
     }
 
     [McpServerTool, Description("Run a full architecture investigation for any question or feature name. Returns summary, explanation, impact analysis, files to read, and writes a handoff markdown file. Use this as the default entry point for open-ended questions.")]

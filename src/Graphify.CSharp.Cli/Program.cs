@@ -177,6 +177,26 @@ internal static class Program
         traceTableCommand.SetHandler(TraceTableAsync, traceTableProjectRootOption, traceTableNameArg);
         root.AddCommand(traceTableCommand);
 
+        var uiAccessCommand = new Command("ui-access", "Get prerequisites and selector hints for reaching a UI element on a surface.");
+        var uiAccessProjectRootOption = new Option<string?>("--project-root", () => null, "Project root containing .graphify/config.json.");
+        var uiAccessSurfaceOption = new Option<string?>("--surface", () => null, "Optional UI surface name to narrow the search.");
+        var uiAccessJsonOption = new Option<bool>("--json", () => false, "Output machine-readable JSON instead of markdown.");
+        var uiAccessElementArg = new Argument<string>("element", "UI element, fragment, or label query.");
+        uiAccessCommand.AddOption(uiAccessProjectRootOption);
+        uiAccessCommand.AddOption(uiAccessSurfaceOption);
+        uiAccessCommand.AddOption(uiAccessJsonOption);
+        uiAccessCommand.AddArgument(uiAccessElementArg);
+        uiAccessCommand.SetHandler(UiAccessAsync, uiAccessProjectRootOption, uiAccessSurfaceOption, uiAccessJsonOption, uiAccessElementArg);
+        root.AddCommand(uiAccessCommand);
+
+        var uiSurfaceCommand = new Command("ui-surface", "List fragments, elements, gates, and actions for a UI surface.");
+        var uiSurfaceProjectRootOption = new Option<string?>("--project-root", () => null, "Project root containing .graphify/config.json.");
+        var uiSurfaceNameArg = new Argument<string>("surface", "UI surface or page name.");
+        uiSurfaceCommand.AddOption(uiSurfaceProjectRootOption);
+        uiSurfaceCommand.AddArgument(uiSurfaceNameArg);
+        uiSurfaceCommand.SetHandler(UiSurfaceAsync, uiSurfaceProjectRootOption, uiSurfaceNameArg);
+        root.AddCommand(uiSurfaceCommand);
+
         return await root.InvokeAsync(args).ConfigureAwait(false);
     }
 
@@ -451,6 +471,40 @@ internal static class Program
 
         var service = new TableMigrationTraceService();
         var result = await service.TraceAsync(database, tableName).ConfigureAwait(false);
+        Console.WriteLine(result.Markdown);
+    }
+
+    private static async Task UiAccessAsync(string? projectRoot, string? surface, bool json, string element)
+    {
+        projectRoot = GraphifyEnvironment.ResolveProjectRoot(projectRoot);
+        projectRoot = GraphWorkspace.DiscoverProjectRoot(projectRoot) ?? projectRoot;
+
+        var setup = new AgentSetupService();
+        await setup.EnsureGraphAsync(projectRoot).ConfigureAwait(false);
+
+        var config = GraphWorkspace.LoadConfig(projectRoot);
+        var databasePath = config?.DatabasePath ?? GraphWorkspace.GetDefaultDatabasePath(projectRoot);
+        await using var database = await GraphDatabase.OpenAsync(databasePath).ConfigureAwait(false);
+
+        var service = new UiAccessPathService();
+        var result = await service.GetAccessPathAsync(database, element, surface).ConfigureAwait(false);
+        Console.WriteLine(json ? result.Json : result.Markdown);
+    }
+
+    private static async Task UiSurfaceAsync(string? projectRoot, string surface)
+    {
+        projectRoot = GraphifyEnvironment.ResolveProjectRoot(projectRoot);
+        projectRoot = GraphWorkspace.DiscoverProjectRoot(projectRoot) ?? projectRoot;
+
+        var setup = new AgentSetupService();
+        await setup.EnsureGraphAsync(projectRoot).ConfigureAwait(false);
+
+        var config = GraphWorkspace.LoadConfig(projectRoot);
+        var databasePath = config?.DatabasePath ?? GraphWorkspace.GetDefaultDatabasePath(projectRoot);
+        await using var database = await GraphDatabase.OpenAsync(databasePath).ConfigureAwait(false);
+
+        var service = new UiAccessPathService();
+        var result = await service.GetSurfaceMapAsync(database, surface).ConfigureAwait(false);
         Console.WriteLine(result.Markdown);
     }
 

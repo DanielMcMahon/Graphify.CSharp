@@ -18,5 +18,9 @@ Examples that should trigger graph lookup:
 - "Trace notifications from the API to INotifier"
 - "Who calls OrderService?"
 - "What happens when a job is offered?"
+- "How do I reach the invoice link on order details?" → `GetUiAccessPath`
+- "What UI is rendered on OrderDetailsPage?" → `ListSurfaceUi`
 
-Prefer graph-backed answers with file paths and relation types (`calls`, `handles`, `routes`, `injects`).
+For server-rendered / dynamically generated UI (WebForms, imperative HTML builders), use `GetUiAccessPath`, `ListSurfaceUi`, or `ExportUiPrerequisites` before writing Playwright tests.
+
+Prefer graph-backed answers with file paths and relation types (`calls`, `handles`, `routes`, `injects`, `gated_by`, `renders`).

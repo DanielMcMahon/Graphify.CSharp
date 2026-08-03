@@ -166,6 +166,7 @@ public sealed class RoslynGraphBuilder
         DataGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
         FileStorageGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
         DiRegistrationGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
+        UiGraphExtractor.Extract(project, compilation, assemblyName, nodes, edges);
     }
 
     private static void ExtractDeclaredSymbols(

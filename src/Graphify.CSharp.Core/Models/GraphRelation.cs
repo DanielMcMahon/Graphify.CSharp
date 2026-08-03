@@ -23,4 +23,11 @@ public static class GraphRelation
     public const string PageCodeBehind = "page_codebehind";
     public const string HasFileField = "has_file_field";
     public const string UsesFileStorage = "uses_file_storage";
+    public const string Hosts = "hosts";
+    public const string Renders = "renders";
+    public const string GatedBy = "gated_by";
+    public const string BoundTo = "bound_to";
+    public const string NavigatesTo = "navigates_to";
+    public const string HandledBy = "handled_by";
+    public const string EmitsSelector = "emits_selector";
 }

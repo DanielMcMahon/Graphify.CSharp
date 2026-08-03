@@ -41,6 +41,10 @@ dotnet run --project src/Graphify.CSharp.Cli -- watch /path/to/YourSolution.sln 
 # Trace ASP.NET endpoint -> handler -> repository flows
 dotnet run --project src/Graphify.CSharp.Cli -- flows "GET /jobs" --db .graphify/graph.db
 
+# UI access paths for server-rendered / imperative UI (Playwright prep)
+dotnet run --project src/Graphify.CSharp.Cli -- ui-access "invoice-link" --surface OrderDetailsPage
+dotnet run --project src/Graphify.CSharp.Cli -- ui-surface OrderDetailsPage
+
 # Interactive graph UI (like Graphify's graph.html)
 dotnet run --project src/Graphify.CSharp.Cli -- serve
 # Open http://127.0.0.1:5173
@@ -119,7 +123,9 @@ dotnet run --project src/Graphify.CSharp.Cli -- serve --db .graphify/graph.db --
 
 The MCP server uses **stdio** transport, which works with Cursor, GitHub Copilot, OpenCode, Codex, and other MCP-compatible clients. Each client spawns its own server process; they can all run at the same time and share the same graph when pointed at the same database file.
 
-**Tools:** `Investigate`, `HowDoesItWork`, `EnsureGraph`, `GetGraphStatus`, `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindFlows`, `FindGaps`.
+**Tools:** `Investigate`, `HowDoesItWork`, `EnsureGraph`, `GetGraphStatus`, `BuildGraph`, `QuerySymbol`, `FindPath`, `ExplainSymbol`, `FindFlows`, `FindGaps`, `GetUiAccessPath`, `ListSurfaceUi`, `ExportUiPrerequisites`.
+
+`GetUiAccessPath` is for **server-rendered UI / Playwright prep** — it traces prerequisites, visibility gates, selector hints, and navigation for dynamically generated UI (WebForms, imperative HTML builders, etc.).
 
 `Investigate` is the default entry point for open-ended questions — it runs search, explanation, impact analysis, and writes a handoff file to `.graphify/investigations/`.
 

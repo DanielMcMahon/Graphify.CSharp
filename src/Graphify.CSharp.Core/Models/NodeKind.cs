@@ -14,5 +14,12 @@ public enum NodeKind
     Project,
     Table,
     Page,
-    FileField
+    FileField,
+    UiSurface,
+    UiFragment,
+    UiElement,
+    UiGate,
+    UiBinding,
+    UiAction,
+    UiSelectorHint
 }

@@ -28,6 +28,9 @@ Do not guess when the graph can answer.
 | `Investigate` | **Default** — any open question ("how does job offering work?", "can we remove INotifier?") |
 | `AssessChange` | **Refactoring** — removal difficulty, MediatR swap, blast radius |
 | `TraceTable` | **Migration** — start from a DB table, trace back to pages, file columns, storage |
+| `GetUiAccessPath` | **Playwright / UI** — prerequisites and selector hints for a UI element |
+| `ListSurfaceUi` | **Playwright / UI** — map fragments, elements, gates on a surface |
+| `ExportUiPrerequisites` | **Playwright / UI** — JSON prerequisites for test setup |
 | `HowDoesItWork` | Known symbol, focused explanation |
 | `EnsureGraph` | Graph missing, stale, or first query in session |
 | `GetGraphStatus` | Check if graph exists and is current |
@@ -58,6 +61,8 @@ You should **not** ask the user to run CLI commands unless MCP is unavailable.
 | "What if we removed MediatR?" | `AssessChange("mediator")` or `Investigate("swap mediatr for direct handler calls")` |
 | "Can I remove ShiftService?" | `AssessChange("ShiftService")` |
 | "Trace from JobsController to the database" | `FindFlows("JobsController")` then `FindPath` if needed |
+| "How do I reach the invoice link on order details?" | `GetUiAccessPath("invoice-link", surface: "OrderDetailsPage")` |
+| "What UI is on OrderDetailsPage?" | `ListSurfaceUi("OrderDetailsPage")` |
 
 ## Answering format
 
